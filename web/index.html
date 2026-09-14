@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DJ Fly | RadioTEDU</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <main>
+    <header><a href="https://radiotedu.com/">RadioTEDU</a><span>DJ Fly</span></header>
+    <h1>Kararın içinden.</h1>
+    <p class="intro">Müzik özelliklerinden ağ etkinliğine, ağ etkinliğinden geçiş tercihine.</p>
+    <p id="source" class="source" role="status">Yerel ağ durumu yükleniyor…</p>
+    <figure>
+      <canvas id="network" aria-label="Giriş, ara ve çıkış gruplarının hesaplanan etkinliği"></canvas>
+      <figcaption><span>Yapay girdiler</span><span>Ara bağlantılar</span><span>Karar okumaları</span></figcaption>
+    </figure>
+    <p class="caption">Konumlar şematiktir. Düğüm yoğunlukları ve yollar, son kararın hesaplanan ağ durumunu gösterir.</p>
+    <p id="decision" aria-live="polite">Henüz karar yok.</p>
+    <dl id="readouts" aria-label="Karar kanalları"></dl>
+    <details id="credits"><summary>MaleCNS ve DJ Fly hakkında</summary>
+      <p id="explanation">Veri kaynağı doğrulanıyor.</p><p id="attribution"></p>
+      <p><a href="https://male-cns.janelia.org/">MaleCNS projesi</a> ·
+        <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></p>
+    </details>
+    <section id="development" hidden aria-labelledby="dev-title">
+      <h2 id="dev-title">Geliştirici incelemesi</h2>
+      <p>Bu yerel önizleme, örnek müzik özelliklerini kullanır. Ses çalmaz. Aynı tohum aynı kararı üretir.</p>
+      <form id="rerun"><label for="seed">Deterministik tohum</label>
+        <input id="seed" name="seed" type="number" min="0" max="4294967295" step="1" value="20260913" required>
+        <button type="submit">Kararı yeniden hesapla</button>
+      </form>
+      <details><summary>Güvenli adaylar, girdiler ve karar kaydı</summary><pre id="debug"></pre></details>
+    </section>
+    <p id="error" role="alert" hidden></p>
+  </main>
+</body>
+</html>

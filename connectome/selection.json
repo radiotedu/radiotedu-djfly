@@ -1,0 +1,45 @@
+{
+  "version": "mb-projection-v2",
+  "dataset": "male-cns:v1.0",
+  "server": "https://neuprint.janelia.org",
+  "mappingSeed": "radiotedu-malecns-mb-v1",
+  "populations": [
+    {"name": "kenyon", "role": "input", "typeRegex": "KC.*", "reason": "Kenyon cells form the intrinsic mushroom-body population. Artificial music features are injected here; no sensory or auditory equivalence is asserted."},
+    {"name": "feedback", "role": "intermediate", "typeRegex": "(APL|DPM)", "reason": "Annotated mushroom-body feedback neurons add measured local connectivity. Modulation and receptor physiology are not simulated."},
+    {"name": "mbon", "role": "output", "typeRegex": "MBON.*", "reason": "Mushroom-body output neurons provide anatomically motivated readout locations. DJ channel assignments are an engineered mapping."}
+  ],
+  "experiments": {
+    "maxNeurons": [1024, 2048, 3072, 3584],
+    "includeFullPopulationBaseline": true,
+    "minSynapses": [1, 3, 5],
+    "retainedWeightFraction": 0.8,
+    "maxEdges": 150000,
+    "maxCompressedBytes": 4194304,
+    "maxDecisionP95Ms": 100,
+    "maxCandidates": 8,
+    "minOutputReachability": 1.0
+  },
+  "query": {"maxPopulationNeurons": 12000, "batchSize": 100, "threads": 1},
+  "edgePolicy": {
+    "excludeRolePairs": [["input", "input"]],
+    "reason": "The phase-1 model retains measured KC-to-MBON projection and APL/DPM/MBON feedback connections. KC-to-KC edges are omitted to bound the unsigned recurrent drive and computational cost. This is an engineering simplification, not a claim that those biological connections are unimportant. Retained full-circuit weight is reported separately."
+  },
+  "inputTypeChannels": {
+    "KC": ["setEnergy"],
+    "KCa'b'-ap1": ["candidateBpmDifference", "requestedEnergyDirection"],
+    "KCa'b'-ap2": ["rhythmicDensity"],
+    "KCa'b'-m": ["midEnergy"],
+    "KCab-c": ["bassEnergy"],
+    "KCab-m": ["currentBpm", "harmonicCompatibility"],
+    "KCab-p": ["spectralCentroid"],
+    "KCab-s": ["loudness"],
+    "KCg": ["energy"],
+    "KCg-d": ["highEnergy", "spectralFlatness"],
+    "KCg-m": ["energy", "setEnergy", "transitionOpportunity"],
+    "KCg-s1": ["energy", "transitionOpportunity"],
+    "KCg-s2": ["energy", "transitionOpportunity"],
+    "KCg-s3": ["energy", "transitionOpportunity"],
+    "KCg-s4": ["energy", "transitionOpportunity"]
+  },
+  "signMode": "unsigned-synapse-proxy"
+}

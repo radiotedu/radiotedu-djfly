@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
+generated/*
+!generated/.gitkeep
+connectome/cache/
+changes/
+node_modules/
+local/
+dist/
+*.log

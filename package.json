@@ -1,0 +1,39 @@
+{
+  "name": "@radiotedu/djfly",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Offline MaleCNS-derived DJ intent engine",
+  "exports": {
+    ".": {
+      "types": "./index.d.mts",
+      "default": "./index.mjs"
+    },
+    "./telemetry": "./telemetry/state.mjs"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "test:fixture": "node --test tests/engine.test.mjs tests/http.test.mjs",
+    "demo": "node scripts/replay.mjs examples/request.json generated/demo.json",
+    "demo:fixture": "node scripts/replay.mjs --fixture examples/request.json generated/fixture-demo.json",
+    "benchmark": "node scripts/benchmark.mjs",
+    "benchmark:fixture": "node scripts/benchmark.mjs --fixture",
+    "preview": "node scripts/preview.mjs",
+    "start": "node server/main.mjs",
+    "dev": "node server/main.mjs --development --demo",
+    "build": "node scripts/build.mjs",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit --strict --module nodenext --target es2022 index.d.mts events/contracts.d.ts tests/contracts-check.ts",
+    "test:browser": "node scripts/browser-smoke.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "esbuild": "0.28.2",
+    "eslint": "10.10.0",
+    "globals": "17.12.0",
+    "typescript": "5.9.3"
+  }
+}

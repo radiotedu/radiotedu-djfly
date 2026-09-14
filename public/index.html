@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b0b0c">
+  <meta name="description" content="RadioTEDU DJ Fly. Gerçek konektom bağlantılarının müzik ve geçiş tercihlerini etkilediği özel DJ yayını.">
+  <title>DJ Fly / RadioTEDU</title>
+  <link rel="stylesheet" href="./assets/style.css">
+  <script type="module" src="./assets/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#listening">Dinleme alanına geç</a>
+  <header class="site-header">
+    <a href="https://radiotedu.com/" aria-label="RadioTEDU ana sayfa"><img src="./assets/radiotedu-logo.png" alt="RadioTEDU" width="170" height="30"></a>
+    <span class="header-note">TED ÜNİVERSİTESİ'NİN SESİ</span>
+    <nav aria-label="DJ Fly"><a href="#credits">Deney hakkında</a><a href="https://radiotedu.com/">Ana radyoya dön <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main id="listening" class="shell">
+    <div id="demo-notice" class="demo-notice" hidden>Yerel geliştirme yayını · Özgün RadioTEDU Lab test kayıtları</div>
+    <div class="masthead">
+      <div><p class="eyebrow">RADIO TEDU / ÖZEL YAYIN</p><h1>DJ <i>FLY</i><span class="fly-mark" aria-hidden="true"><svg viewBox="0 0 70 54"><path d="M34 27C6 2 0 32 25 32M36 27C64 2 70 32 45 32M35 16v29m-10-5 10-9 10 9m-10-28-8-7m8 7 8-7"/></svg></span></h1></div>
+      <div class="event-heading"><p id="event-phase" class="event-phase">YAYIN BİLGİSİ</p><h2 id="event-title">Sıradaki uçuş hazırlanıyor.</h2><p id="event-time">RadioTEDU'nun özel DJ yayını</p></div>
+    </div>
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <div class="booth">
+      <section class="stage" aria-label="Müzik görselleştiricisi">
+        <canvas id="visualizer" aria-label="Gerçek miks spektrumu ve MaleCNS etkinlik izleri"></canvas>
+        <div class="stage-top"><span id="stage-status">BİR SONRAKİ UÇUŞ</span><span id="stage-clock">RadioTEDU / Ankara</span></div>
+        <div class="stage-center" id="entry-copy"><p id="entry-caption">Bir sonraki parça.<br>Başka bir bağlantı.</p><p id="countdown" hidden></p></div>
+        <div class="stage-bottom"><span id="analyser-label">SESİ AÇ, İZİNİ GÖR.</span><span id="visualizer-fallback" hidden>Görsel kapalı. Ses bağımsız çalışır.</span><button id="visual-toggle" class="quiet-button" type="button" aria-pressed="true">Görseli kapat</button></div>
+      </section>
+      <section class="now-playing" aria-labelledby="now-title">
+        <div class="now-copy"><p class="eyebrow" id="now-label">DİNLEME ODASI</p><h2 id="now-title">Uçuşa hazır mısın?</h2><p id="now-artist">İki çalar, bir sinek, yeni bağlantılar.</p></div>
+        <div class="listening-controls"><button id="listen" class="listen-button" type="button" disabled><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8Z"/></svg><span>Yayın bekleniyor</span></button><label class="volume">Ses <input id="volume" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Dinleme ses düzeyi"></label></div>
+      </section>
+      <section class="deck-rack" aria-label="Gerçek ses çalarları">
+        <article class="deck" id="deck-a"><div class="deck-head"><span class="deck-letter">A</span><span class="deck-role">SES ÇALARI</span><span class="deck-state">EMPTY</span></div><h3>Dinlemeyi başlat</h3><p class="artist">Kayıt, dinlemeye katıldığında yüklenir.</p><div class="waveform" aria-hidden="true"></div><div class="deck-foot"><span class="tempo">Hazır bekliyor</span><span class="position">00:00</span></div></article>
+        <article class="deck" id="deck-b"><div class="deck-head"><span class="deck-letter">B</span><span class="deck-role">SES ÇALARI</span><span class="deck-state">EMPTY</span></div><h3>Sıradaki kayıt</h3><p class="artist">Geçiş için hazırlanacak.</p><div class="waveform" aria-hidden="true"></div><div class="deck-foot"><span class="tempo">Hazır bekliyor</span><span class="position">00:00</span></div></article>
+      </section>
+      <aside class="fly-panel" aria-labelledby="fly-state"><p class="eyebrow">KARAR MASASI</p><h2 id="fly-state">SİNEK<br>BEKLİYOR.</h2><p id="fly-message">Yayın başlayınca seçenekler burada görünür.</p><div class="transition-note" id="transition-note" hidden><span>SONRAKİ GEÇİŞ</span><strong id="transition-label"></strong><p id="transition-countdown"></p></div><dl id="readouts" class="readouts"></dl><p class="score-note" id="score-note" hidden>Göreli tercih ve etkinlik değerleri. Beğeni ya da güven olasılığı değildir.</p><div class="visual-options"><label for="preset">Görsel</label><select id="preset"><option value="orbit">Plak izleri</option><option value="wave">Dalga çizgisi</option><option value="network">Bağlantılar</option></select></div></aside>
+      <section class="thought-rack" aria-label="Düşünce çalarları">
+        <article class="thought-deck" id="deck-c"><span class="deck-letter">C</span><div><p class="deck-state">DÜŞÜNCE ÇALARI</p><h3>Aday bekleniyor</h3><p class="artist">Ses çalmaz. Sineğin seçeneklerini gösterir.</p></div><div class="candidate-score"></div></article>
+        <article class="thought-deck" id="deck-d"><span class="deck-letter">D</span><div><p class="deck-state">DÜŞÜNCE ÇALARI</p><h3>Aday bekleniyor</h3><p class="artist">Ses çalmaz. Sineğin seçeneklerini gösterir.</p></div><div class="candidate-score"></div></article>
+      </section>
+    </div>
+    <section class="event-bottom"><p id="event-description">Müzik akışına bir konektom deneyi eşlik ediyor.</p><p id="source-label">MaleCNS bağlantıları / RadioTEDU tasarımı</p></section>
+    <details id="credits" class="credits"><summary>Bu sinek nasıl karar veriyor? <span aria-hidden="true">+</span></summary><div><p>DJ Fly, HHMI Janelia MaleCNS Drosophila konektomundan türetilmiş gerçek bağlantıları kullanır. RadioTEDU, müzik ve DJ durumu özelliklerini yapay sinir girdilerine dönüştürür. Basitleştirilmiş modelde yayılan etkinliğin çıktıları, güvenli seçenekler arasındaki parça ve geçiş tercihlerini etkiler.</p><p>Bağlantı verisi biyolojik kaynaktan gelir; girdi eşlemeleri, etkinlik modeli, DJ kuralları ve görsel düzen RadioTEDU tasarımıdır. Bu, yaşayan bir sineğin eksiksiz beyin simülasyonu değildir. C ve D düşünce çalarlarıdır; ses A ve B'de karışır.</p><p><a href="https://male-cns.janelia.org/" target="_blank" rel="noreferrer">MaleCNS v1.0 · HHMI Janelia FlyEM ve proje ortakları</a><br><a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>. Türetilmiş alt ağ, yapay müzik eşlemeleri ve basitleştirilmiş model: RadioTEDU.</p></div></details>
+    <div id="development-root"></div>
+  </main>
+  <footer class="site-footer"><strong>FARKI DİNLE. FARKLI HİSSET.</strong><span>RadioTEDU · Ankara</span><a href="https://radiotedu.com/gizlilik-politikasi/">Gizlilik</a></footer>
+</body>
+</html>

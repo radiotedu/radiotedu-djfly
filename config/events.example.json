@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "events": [{
+    "id": "djfly-session",
+    "title": "DJ Fly / Gece Uçuşu",
+    "description": "RadioTEDU'nun konektom destekli özel DJ yayını.",
+    "startAt": "2026-10-02T21:00:00+03:00",
+    "endAt": "2026-10-02T23:00:00+03:00",
+    "timezone": "Europe/Istanbul",
+    "enabled": false,
+    "poolId": "authorized-pool",
+    "startingTrackId": null,
+    "artwork": null,
+    "visualizerPreset": "orbit",
+    "settings": {
+      "riskCeiling": 0.7,
+      "showOffFrequency": 0.25,
+      "repeatCooldownMinutes": 20,
+      "artistCooldownTracks": 2,
+      "bpmRange": [116, 128],
+      "allowedTags": ["house", "electronic"]
+    }
+  }]
+}

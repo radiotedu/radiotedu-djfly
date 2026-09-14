@@ -1,0 +1,12 @@
+{
+  "version": "music-mb-v2",
+  "features": [
+    "currentBpm", "candidateBpmDifference", "energy", "loudness",
+    "bassEnergy", "midEnergy", "highEnergy", "rhythmicDensity",
+    "spectralCentroid", "harmonicCompatibility", "setEnergy",
+    "requestedEnergyDirection", "transitionOpportunity", "spectralFlatness"
+  ],
+  "channels": ["preference", "risk", "energyDirection", "transitionAggressiveness", "blend", "showOff"],
+  "ranges": {"bpm": [60, 200], "bpmDifference": [0, 12], "loudnessLufs": [-36, -6], "spectralCentroidHz": [0, 12000]},
+  "model": {"steps": 16, "leak": 0.25, "recurrence": 0.85, "stimulusGain": 1.2, "readoutGain": 8}
+}
