@@ -36,7 +36,7 @@ async function applyState(next) {
   if (next.development && !devBuilt) buildDevelopment();
   if (next.thought !== lastThought) {
     lastThought = next.thought;
-    visualizer.telemetry = next.thought?.source === 'REAL_MALECNS' ? next.thought.telemetry : null;
+    visualizer.telemetry = next.thought?.source === 'REAL_MALECNS' || next.thought?.source === 'BROADCAST_MALECNS' ? next.thought.telemetry : null;
     renderThought();
   }
   await mixer.accept(next);
@@ -151,7 +151,7 @@ function render() {
   const status = !live ? 'WAITING' : view.phase === 'RECOVERING' ? 'RECOVERING' : state.dj.phase;
   const titles = { WAITING: 'SİNEK BEKLİYOR.', SEARCHING: 'SIRADAKİ PARÇA?', DECIDING: 'SİNEK DÜŞÜNÜYOR.', PREPARING: 'SİNEK SEÇTİ.', PLAYING: 'AKIŞ DEVAM EDİYOR.', TRANSITIONING: 'BAĞLANTI KURULDU.', RECOVERING: 'MÜZİK DEVAM ETSİN.' };
   text('fly-state', thought?.source === 'SAFETY_FALLBACK' && live ? 'GÜVENLİ GEÇİŞ.' : titles[status] ?? titles.WAITING);
-  text('fly-message', thought?.source === 'SAFETY_FALLBACK' && live ? 'Sinir ağı kararına ulaşılamadı. Müzik kuralları güvenli seçeneği belirledi.' : !live ? 'Yayın başlayınca seçenekler burada görünür.' : thought ? `${thought.candidates.length} güvenli aday değerlendirildi. ${thought.candidates.find(c => c.state === 'SELECTED')?.track.title ?? 'Sıradaki kayıt'} seçildi.` : 'Parça akarken bir sonraki geçiş penceresi bekleniyor.');
+  text('fly-message', thought?.source === 'SAFETY_FALLBACK' && live ? 'Sinir ağı kararına ulaşılamadı. Müzik kuralları güvenli seçeneği belirledi.' : !live ? 'Yayın başlayınca seçenekler burada görünür.' : thought?.source === 'BROADCAST_MALECNS' ? `Canlı yayın PC kararı${state.broadcast?.stale ? ' (son bilinen, bağlantı eski)' : ''}: ${thought.decision?.selectedTrackId ?? 'kayıt'} · ${thought.decision?.selectedStrategyId ?? ''}.` : thought ? `${thought.candidates.length} güvenli aday değerlendirildi. ${thought.candidates.find(c => c.state === 'SELECTED')?.track.title ?? 'Sıradaki kayıt'} seçildi.` : 'Parça akarken bir sonraki geçiş penceresi bekleniyor.');
   for (const [index, id] of ['deck-a', 'deck-b'].entries()) renderDeck(id, view.decks[index]);
   if (view.error) notice(view.error);
   if (devBuilt && $('debug-output')?.open) text('debug-json', JSON.stringify({ audio: view, program: state, clientEvents: events, visualizer: visualizer.stats() }, null, 2));

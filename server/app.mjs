@@ -11,10 +11,21 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=u
 const CLIENT_EVENTS = new Set(['listening-started', 'track-started', 'transition-armed', 'transition-started', 'transition-completed',
   'deck-load-failure', 'fallback-used', 'playback-interruption', 'playback-resumed', 'visualizer-disabled', 'audio-error', 'missed-deadline']);
 
-async function bodyOf(req) {
+async function bodyOf(req, maxBytes = 16384) {
   let body = '';
-  for await (const chunk of req) { body += chunk; if (body.length > 16384) throw new Error('Request too large.'); }
+  for await (const chunk of req) { body += chunk; if (body.length > maxBytes) throw new Error('Request too large.'); }
   return JSON.parse(body);
+}
+
+function validBroadcastTelemetry(telemetry) {
+  if (telemetry === null) return true;
+  if (!telemetry || typeof telemetry !== 'object' || !Array.isArray(telemetry.nodes)) return false;
+  if (telemetry.nodes.length > 200 || !Array.isArray(telemetry.edges) || telemetry.edges.length > 300) return false;
+  for (const n of telemetry.nodes) {
+    if (!n || typeof n.id !== 'string' || typeof n.role !== 'string'
+      || !Number.isFinite(n.activity) || !Number.isFinite(n.stimulus)) return false;
+  }
+  return true;
 }
 
 export async function createPublicServer({ coordinator, journal, mediaDirectory = resolve(ROOT, 'local/media'),
@@ -32,7 +43,7 @@ export async function createPublicServer({ coordinator, journal, mediaDirectory 
   const timer = setInterval(async () => {
     await coordinator.tick();
     const state = coordinator.snapshot();
-    const identity = `${state.revision}:${state.dj.phase}:${state.dj.failure}`;
+    const identity = `${state.revision}:${state.dj.phase}:${state.dj.failure}:${state.broadcast?.trackId ?? '-'}:${state.broadcast?.receivedAt ?? 0}`;
     if (identity !== previous) { previous = identity; broadcast(); }
   }, 500);
   const keepAlive = setInterval(() => { for (const res of clients) res.write(': keepalive\n\n'); }, 15000);
@@ -78,6 +89,23 @@ export async function createPublicServer({ coordinator, journal, mediaDirectory 
         const safe = { clientReported: true, eventId: coordinator.event?.id ?? null };
         for (const key of ['trackId', 'deck', 'strategyId', 'reason', 'sessionId']) if (typeof data[key] === 'string') safe[key] = data[key].slice(0, 160);
         journal.record(data.type, safe); return json(res, 202, { accepted: true });
+      }
+      if (req.method === 'POST' && pathname === '/djfly/api/broadcast-telemetry') {
+        const expected = process.env.DJFLY_BROADCAST_TOKEN;
+        if (!expected) return json(res, 404, { error: 'Not found.' });
+        if (req.headers.authorization !== `Bearer ${expected}`) return json(res, 401, { error: 'Unauthorized broadcaster.' });
+        if (!req.headers['content-type']?.startsWith('application/json')) return json(res, 400, { error: 'JSON required.' });
+        const key = `broadcast:${req.socket.remoteAddress}`, now = Date.now();
+        const bucket = rates.get(key) ?? { since: now, count: 0 };
+        if (now - bucket.since > 60000) { bucket.since = now; bucket.count = 0; }
+        if (++bucket.count > 60) return json(res, 429, { error: 'Broadcast limit.' });
+        rates.set(key, bucket);
+        const data = await bodyOf(req, 131072);
+        if (!data || typeof data.trackId !== 'string' || !data.trackId || data.trackId.length > 160) return json(res, 400, { error: 'Invalid broadcast track.' });
+        if (data.decidedAt !== undefined && data.decidedAt !== null && typeof data.decidedAt !== 'string') return json(res, 400, { error: 'Invalid broadcast time.' });
+        if (!validBroadcastTelemetry(data.telemetry ?? null)) return json(res, 400, { error: 'Invalid broadcast telemetry.' });
+        coordinator.ingestBroadcast({ trackId: data.trackId, decidedAt: data.decidedAt ?? null, decision: data.decision ?? null, telemetry: data.telemetry ?? null });
+        return json(res, 202, { accepted: true });
       }
       if (['GET', 'HEAD'].includes(req.method) && pathname.startsWith('/djfly/media/')) {
         const name = pathname.slice('/djfly/media/'.length);

@@ -13,6 +13,7 @@
     <h1>Kararın içinden.</h1>
     <p class="intro">Müzik özelliklerinden ağ etkinliğine, ağ etkinliğinden geçiş tercihine.</p>
     <p id="source" class="source" role="status">Yerel ağ durumu yükleniyor…</p>
+    <p id="broadcast-banner" class="broadcast" role="status" hidden></p>
     <figure>
       <canvas id="network" aria-label="Giriş, ara ve çıkış gruplarının hesaplanan etkinliği"></canvas>
       <figcaption><span>Yapay girdiler</span><span>Ara bağlantılar</span><span>Karar okumaları</span></figcaption>
@@ -20,6 +21,123 @@
     <p class="caption">Konumlar şematiktir. Düğüm yoğunlukları ve yollar, son kararın hesaplanan ağ durumunu gösterir.</p>
     <p id="decision" aria-live="polite">Henüz karar yok.</p>
     <dl id="readouts" aria-label="Karar kanalları"></dl>
+
+    <section id="neurons" aria-labelledby="neurons-title">
+      <h2 id="neurons-title">Hangi nöron ateşlendi?</h2>
+      <p>Son kararın hesaplanan ağ durumu. <code>activity</code> yayılım sonrası durum (0–1),
+      <code>stimulus</code> yapay müzik girdisi. Tablo ilk 100 satırla sınırlı, arama ile filtrele.</p>
+      <form id="neuron-filter">
+        <label for="neuron-search">Ara (bodyId / tip)</label>
+        <input id="neuron-search" name="q" type="search" placeholder="ör. MBON, KCab-m, 10013" autocomplete="off">
+        <label for="role-filter">Rol</label>
+        <select id="role-filter" name="role">
+          <option value="all">Tümü</option>
+          <option value="input">Girdi (KC)</option>
+          <option value="intermediate">Ara (APL/DPM)</option>
+          <option value="output">Çıktı (MBON)</option>
+        </select>
+      </form>
+      <p id="neuron-count" role="status">Nöron verisi bekleniyor.</p>
+      <div class="table-wrap">
+      <table id="neuron-table">
+        <thead><tr><th>bodyId</th><th>tip</th><th>rol</th><th>activity</th><th>stimulus</th></tr></thead>
+        <tbody id="neuron-rows"><tr><td colspan="5">Henüz veri yok.</td></tr></tbody>
+      </table>
+      </div>
+      <p class="caption">Tam liste geliştirici modunda <code>/djfly/api/debug</code> altında
+      (<code>neuralInput</code>, <code>strongestGroups</code>). Görünür düğümler
+      <code>telemetry/state.mjs</code> içinde rol başına ilk 64 + 192 kenar + 6 yol ile örneklenir.</p>
+    </section>
+
+    <section id="method" aria-labelledby="method-title">
+      <h2 id="method-title">Yöntem: yapay eşleme + basitleştirilmiş model</h2>
+      <p>Bağlantılar gerçektir (MaleCNS), anlamlandırmalar RadioTEDU tasarımıdır.
+      Sinek müzik duymaz ve beğenmez; sıradaki parça güvenli adaylar arasından sıralanır.</p>
+      <h3>14 özellik → Kenyon hücresi tipi</h3>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Özellik</th><th>Normalizasyon</th><th>KC tipi</th></tr></thead>
+        <tbody>
+          <tr><td>Mevcut BPM</td><td>60–200 → 0–1</td><td><code>KCab-m</code></td></tr>
+          <tr><td>Aday BPM farkı</td><td>0–12 → 0–1</td><td><code>KCa'b'-ap1</code></td></tr>
+          <tr><td>Enerji</td><td>ölçülen 0–1</td><td><code>KCg</code> grubu</td></tr>
+          <tr><td>Loudness</td><td>−36…−6 LUFS → 0–1</td><td><code>KCab-s</code></td></tr>
+          <tr><td>Bas enerjisi</td><td>ölçülen 0–1</td><td><code>KCab-c</code></td></tr>
+          <tr><td>Mid enerji</td><td>ölçülen 0–1</td><td><code>KCa'b'-m</code></td></tr>
+          <tr><td>Yüksek frekans</td><td>ölçülen 0–1</td><td><code>KCg-d</code> parçası</td></tr>
+          <tr><td>Ritmik yoğunluk</td><td>ölçülen 0–1</td><td><code>KCa'b'-ap2</code></td></tr>
+          <tr><td>Spektral centroid</td><td>0–12.000 Hz → 0–1</td><td><code>KCab-p</code></td></tr>
+          <tr><td>Harmonik uyum</td><td>1 / 0.9 / 0.8</td><td><code>KCab-m</code> parçası</td></tr>
+          <tr><td>Set enerjisi</td><td>DJ durumu 0–1</td><td><code>KCg-m</code> parçası</td></tr>
+          <tr><td>İstenen enerji yönü</td><td>−1…1 → 0–1</td><td><code>KCa'b'-ap1</code> parçası</td></tr>
+          <tr><td>Geçiş fırsatı</td><td>DJ durumu 0–1</td><td><code>KCg-m/s</code> parçası</td></tr>
+          <tr><td>Spektral düzlük</td><td>ölçülen 0–1</td><td><code>KCg-d</code> parçası</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <h3>Etkinlik ve okuma</h3>
+      <pre>x(t+1) = 0.25·x + 0.75·tanh(0.85·W·x + 1.2·stimulus), 16 adım
+W: sqrt(sinaps), hedef-satır L1 ≤ 1, işaretsiz vekil
+readout = 0.5 + 0.5·tanh(8·(grupOrt − ortalamalarınOrt))</pre>
+      <p>6 kanal: <code>preference, risk, energyDirection, transitionAggressiveness, blend, showOff</code>.
+      Her tip bölünmeden tek kanala atanır (18/18/23/12/14/12 MBON).</p>
+      <h3>Sınırlar</h3>
+      <ul>
+        <li><code>KC→KC</code> kenarları çıkarıldı (642.933 kenar); %39,3 ağırlık bu modelin dışında.</li>
+        <li>İnhibisyon fizyolojik değil, işaretsiz sinaps vekili.</li>
+        <li>Yerleşim şematik rol şeridi, anatomik koordinat değil.</li>
+        <li>Skor farkı güven olasılığı değildir.</li>
+      </ul>
+    </section>
+
+    <section id="connectomes" aria-labelledby="conn-title">
+      <h2 id="conn-title">BANC mı MaleCNS mi? meyvesin mi djfly mı?</h2>
+      <h3>Konektomlar (ikisi de 2026 tam-CNS)</h3>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th>BANC v888 (dişi)</th><th>MaleCNS v1.0 (erkek)</th></tr></thead>
+        <tbody>
+          <tr><td>Kaynak</td><td>Nature 2026 Bates vd., GridTape TEM 4×4×45 nm, 7010 kesit</td><td>Janelia + Cambridge + Google, 08.06.2026</td></tr>
+          <tr><td>Büyüklük</td><td>~188 bin satır, 199M sinaps; lamina + ocellar ganglion yok</td><td>164.838 nöron, 11.751 tip, 8 nm izotropik</td></tr>
+          <tr><td>Güçlü yan</td><td>DN/AN döngüleri, davranış kümeleri, CAVE + banc.community</td><td>262 cinsiyete-özgü + 114 dimorfik tip, neuPrint + Clio + NeuronBridge</td></tr>
+          <tr><td>DJ Fly kullanımı</td><td><code>JO→AMMC/WED→AVLP/PVLP</code> işitsel yol (meyvesin)</td><td><code>KC + APL/DPM + MBON = 3.584 düğüm, 53.504 kenar</code> (djfly)</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <h3>İki prototip</h3>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th>meyvesin/ (yerel)</th><th>radiotedu-djfly (GitHub)</th></tr></thead>
+        <tbody>
+          <tr><td>Devre</td><td>BANC işitsel yol, 700 örneklem / v2 katmanlı L0→L1→L2</td><td>Mantar-cisim: 3.483 KC + 4 APL/DPM + 97 MBON</td></tr>
+          <tr><td>Model</td><td>Python LIF (DT 1 ms, SIM 600 ms, TAU 20 ms)</td><td>Node 20 rate model, 16 adım</td></tr>
+          <tr><td>Girdi/çıktı</td><td>Gerçek ses (librosa) → playlist.m3u + anons</td><td>Ses analizsiz, güvenli aday → parça + geçiş (4–32 ölçü)</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <section id="ecosystem" aria-labelledby="eco-title">
+      <h2 id="eco-title">Meyve sineği beyniyle yapılan diğer işler</h2>
+      <p>Tasarım ve işleyiş notlarıyla; DJ Fly hepsinden parça alır ama hiçbirinin yerini tutmaz.</p>
+      <ul>
+        <li><strong>Fruit Fly Brain Observatory (FFBO)</strong> — açık işbirlikçi ekosistem.
+        3B morfoloji gezgini + NeuroNLP ile düz İngilizce sorgu (“sağ SLP’de çıktısı olan MBON’ları göster”).
+        İşleyiş: veri kümelerini ortak şablonda birleştirir. <a href="https://www.fruitflybrain.org/">fruitflybrain.org</a></li>
+        <li><strong>Neurokernel</strong> — tüm sinek beynini çoklu GPU’da öykünmek için açık platform.
+        RFC tabanlı modüller, retina paralel işlem demosu. <a href="https://neurokernel.github.io/">neurokernel.github.io</a></li>
+        <li><strong>FlyBrainLab</strong> — morfolojiden çalıştırılabilir devre kurma: keşfet → devreleştir → işlevi sına.
+        Merkezi kompleks (CX) vaka akışı. <a href="http://www.bionet.ee.columbia.edu/research/ffbo/fbl">FlyBrainLab</a></li>
+        <li><strong>FlyWire / Hemibrain / neuPrint</strong> — 120 binden fazla düzeltilmiş nöron, 30M+ sinaps;
+        hemibrain 25 bin nöron / 20M bağlantı, MB devresi Li vd. 2020. neuPrint ile ortak/komşu sorgusu.
+        <a href="https://flywire.ai/">FlyWire</a> · <a href="https://neuprint.janelia.org/">neuPrint</a></li>
+        <li><strong>Virtual Fly Brain (VFB)</strong> — 28.772 anatomi terimi, 614 bin kayıtlı 3B görüntü, NBLAST şekil benzerliği,
+        Circuit Browser, gen/sürücü satırı eşleme. <a href="https://www.virtualflybrain.org/">virtualflybrain.org</a></li>
+        <li><strong>MaleCNS gezginleri</strong> — hücre-tipi ve dimorfizm kaşifi, Clio anotasyon görünümü, NeuronBridge eşleşmeleri,
+        toplu indirme (<code>gs://flyem-male-cns</code> + neo4j). <a href="https://male-cns.janelia.org/">male-cns.janelia.org</a></li>
+      </ul>
+    </section>
+
     <details id="credits"><summary>MaleCNS ve DJ Fly hakkında</summary>
       <p id="explanation">Veri kaynağı doğrulanıyor.</p><p id="attribution"></p>
       <p><a href="https://male-cns.janelia.org/">MaleCNS projesi</a> ·

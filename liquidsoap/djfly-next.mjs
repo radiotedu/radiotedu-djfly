@@ -30,6 +30,17 @@ const poolPath = arg('--pool', process.env.DJFLY_POOL_PATH ?? '');
 const statePath = arg('--state', process.env.DJFLY_STATE_PATH ?? '');
 const lastPath = arg('--last', process.env.DJFLY_LAST_PATH ?? '');
 const musicDir = arg('--music-dir', process.env.MUZIK_DIR ?? '');
+const telemetryPath = arg('--telemetry-out', process.env.DJFLY_TELEMETRY_PATH ?? (statePath ? resolve(dirname(statePath), 'last-telemetry.json') : ''));
+
+function writeSidecar(payload) {
+  if (!telemetryPath) return;
+  try {
+    mkdirSync(dirname(telemetryPath), { recursive: true });
+    writeFileSync(telemetryPath, JSON.stringify(payload));
+  } catch (e) {
+    err(`sidecar yazilamadi: ${e.message}`);
+  }
+}
 
 if (!poolPath || !statePath || !lastPath || !musicDir) {
   err('eksik arguman: --pool --state --last --music-dir sart (veya ENV).');
@@ -94,6 +105,7 @@ if (!current) {
   mkdirSync(dirname(lastPath), { recursive: true });
   writeFileSync(lastPath, current.id + '\n');
   writeFileSync(statePath, JSON.stringify({ dj, capabilities, seed, lastTrackId: current.id }, null, 2));
+  writeSidecar({ schemaVersion: 1, trackId: current.id, decidedAt: new Date().toISOString(), seed, decision: null, telemetry: null });
   process.stdout.write(firstPath + '\n');
   process.exit(0);
 }
@@ -129,4 +141,5 @@ mkdirSync(dirname(lastPath), { recursive: true });
 mkdirSync(dirname(statePath), { recursive: true });
 writeFileSync(lastPath, next.id + '\n');
 writeFileSync(statePath, JSON.stringify({ dj, capabilities, seed, lastTrackId: next.id }, null, 2));
+writeSidecar({ schemaVersion: 1, trackId: next.id, decidedAt: new Date().toISOString(), seed, decision: result.decision, telemetry: result.telemetry });
 process.stdout.write(absPath + '\n');

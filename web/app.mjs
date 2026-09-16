@@ -32,6 +32,37 @@ function draw() {
   }
 }
 
+function renderNeurons() {
+  const rows = byId('neuron-rows');
+  const count = byId('neuron-count');
+  if (!rows || !count) return;
+  if (!telemetry?.nodes?.length) {
+    rows.replaceChildren();
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 5; td.textContent = 'Henüz veri yok.';
+    tr.append(td); rows.append(tr);
+    count.textContent = 'Nöron verisi bekleniyor.';
+    return;
+  }
+  const q = (byId('neuron-search')?.value ?? '').trim().toLowerCase();
+  const role = byId('role-filter')?.value ?? 'all';
+  const filtered = telemetry.nodes
+    .filter(n => (role === 'all' || n.role === role))
+    .filter(n => !q || String(n.id).toLowerCase().includes(q) || String(n.type ?? '').toLowerCase().includes(q))
+    .sort((a, b) => b.activity - a.activity || b.stimulus - a.stimulus);
+  count.textContent = `${filtered.length} nöron eşleşti (görünür örneklem ${telemetry.nodes.length}). İlk 100 satır listelenir.`;
+  rows.replaceChildren(...filtered.slice(0, 100).map(n => {
+    const tr = document.createElement('tr');
+    for (const value of [String(n.id), String(n.type ?? '—'), String(n.role), Number(n.activity).toFixed(4), Number(n.stimulus).toFixed(4)]) {
+      const td = document.createElement('td');
+      td.textContent = value;
+      tr.append(td);
+    }
+    return tr;
+  }));
+}
+
 export function renderTelemetry(next) {
   telemetry = next;
   byId('source').textContent = next.source.label;
@@ -48,6 +79,16 @@ export function renderTelemetry(next) {
     item.append(term, amount); return item;
   }));
   draw();
+  renderNeurons();
+  const banner = byId('broadcast-banner');
+  if (banner) {
+    if (next.broadcast) {
+      banner.hidden = false;
+      banner.textContent = next.broadcast.stale
+        ? `Son bilinen yayın kararı: ${next.broadcast.trackId} (bağlantı eski, ${Math.round((next.broadcast.ageMs ?? 0) / 60000)} dk).`
+        : `Canlı yayın kararı: ${next.broadcast.trackId}.`;
+    } else banner.hidden = true;
+  }
 }
 
 async function get(path, options) {
@@ -79,6 +120,9 @@ byId('rerun').addEventListener('submit', async event => {
   } catch (error) { byId('error').textContent = error.message; byId('error').hidden = false; }
   finally { button.disabled = false; }
 });
+byId('neuron-search')?.addEventListener('input', renderNeurons);
+byId('role-filter')?.addEventListener('change', renderNeurons);
+byId('neuron-filter')?.addEventListener('submit', event => event.preventDefault());
 new ResizeObserver(draw).observe(byId('network'));
 // Event hosts may deliver their local engine telemetry without exposing the graph artifact.
 window.addEventListener('djfly:telemetry', event => renderTelemetry(event.detail));

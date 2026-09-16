@@ -54,6 +54,9 @@ Incelemesiz havuzla `djfly-next.mjs` calismayi reddeder. Olcum uydurma.
 | `DJFLY_POOL_PATH` | `/opt/djfly/local/pools/canli.json` |
 | `DJFLY_STATE_PATH` | `/var/lib/djfly/state.json` |
 | `DJFLY_LAST_PATH` | `/var/lib/djfly/last.txt` |
+| `DJFLY_TELEMETRY_PATH` | `/var/lib/djfly/last-telemetry.json` (sidecar, otomatik) |
+| `DJFLY_WEB_URL` | `https://ornek.com/djfly/api/broadcast-telemetry` (bos = poster atlanir) |
+| `DJFLY_BROADCAST_TOKEN` | web server'daki `DJFLY_BROADCAST_TOKEN` ile ayni (repoya yazma) |
 | `ICECAST_HOST/PORT/PASS/MOUNT` | `localhost/8000/***//sinek.mp3` |
 
 ## 3) Kontrol + calistir
@@ -63,6 +66,21 @@ liquidsoap --check /opt/djfly/liquidsoap/djfly.liq
 node liquidsoap/djfly-next.mjs --pool local/pools/canli.json --state /var/lib/djfly/state.json --last /var/lib/djfly/last.txt --music-dir /opt/radiotedu/muzik
 liquidsoap /opt/djfly/liquidsoap/djfly.liq
 ```
+
+## 4) Beyin snapshot'i web'e (opsiyonel)
+
+`djfly-next.mjs` her kararda `last-telemetry.json` sidecar yazar (stdout protokolu degismez).
+`on_track.sh` parca basinda `post-telemetry.mjs` ile web'e POST'lar:
+
+```bash
+node liquidsoap/post-telemetry.mjs --file /var/lib/djfly/last-telemetry.json \
+  --url https://ornek.com/djfly/api/broadcast-telemetry --token "$DJFLY_BROADCAST_TOKEN"
+```
+
+Web server'da `DJFLY_BROADCAST_TOKEN` yoksa endpoint 404 doner (ozellik kapali).
+Token yanlissa 401, limit asiminda 429. Poster hata alsa bile exit 0, yayin dusmez.
+Web, taze snapshot varsa (<15 dk) `thought` yerine yayin kararini gosterir, eskiyse
+`son bilinen` bandi cikar.
 
 ## Durust anons
 

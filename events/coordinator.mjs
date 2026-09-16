@@ -10,8 +10,18 @@ export class ProgramCoordinator {
     this.items = []; this.offset = 0; this.revision = 0; this.busy = null; this.status = 'WAITING';
     this.eventView = { phase: 'IDLE', event: null, next: null, secondsRemaining: 0 };
     this.failure = null; this.paused = false; this.seenPlayback = new Set();
+    this.broadcast = null;
   }
   now() { return this.clock() + this.offset; }
+  ingestBroadcast({ trackId, decidedAt = null, decision = null, telemetry = null }) {
+    if (typeof trackId !== 'string' || !trackId || trackId.length > 160) throw new TypeError('Invalid broadcast track.');
+    if (decidedAt !== null && typeof decidedAt !== 'string') throw new TypeError('Invalid broadcast time.');
+    if (telemetry !== null && (typeof telemetry !== 'object' || !Array.isArray(telemetry.nodes))) throw new TypeError('Invalid broadcast telemetry.');
+    this.broadcast = { trackId, decidedAt, decision, telemetry, receivedAt: this.now() };
+    this.journal.record('broadcast-telemetry', { trackId, decidedAt, graphId: telemetry?.graphId ?? null });
+    this.onChange?.();
+    return this.broadcast;
+  }
   async tick() {
     if (this.busy) return this.busy;
     this.busy = this.update().catch(() => { this.failure = 'event-or-pool-unavailable'; this.status = 'RECOVERING'; })
@@ -116,7 +126,16 @@ export class ProgramCoordinator {
   snapshot() {
     const now = this.now(), index = Math.max(0, this.items.findLastIndex(i => i.startAt <= now));
     const current = this.items[index], next = this.items[index + 1];
-    const thought = next?.thought ?? current?.thought ?? null;
+    const localThought = next?.thought ?? current?.thought ?? null;
+    const ageMs = this.broadcast ? now - this.broadcast.receivedAt : null;
+    const stale = ageMs === null ? true : ageMs > 15 * 60 * 1000;
+    const broadcastInfo = this.broadcast
+      ? { trackId: this.broadcast.trackId, decidedAt: this.broadcast.decidedAt, receivedAt: this.broadcast.receivedAt, ageMs, stale }
+      : null;
+    const thought = (this.broadcast?.telemetry && !stale)
+      ? { source: 'BROADCAST_MALECNS', decision: this.broadcast.decision, telemetry: this.broadcast.telemetry,
+          candidates: [], rejected: [], consideredAt: this.broadcast.receivedAt, broadcast: true }
+      : localThought;
     const start = current?.transition?.endAt > now ? Math.max(0, index - 1) : index;
     const program = this.items.slice(start, index + 2).map(item => ({ id: item.id, startAt: item.startAt, transition: item.transition,
       decisionSource: item.decisionSource, track: publicTrack(this.pool.tracks.find(t => t.id === item.trackId)) }));
@@ -124,7 +143,7 @@ export class ProgramCoordinator {
       event: this.eventView, dj: { phase: this.paused ? 'WAITING' : this.status, failure: this.failure, paused: this.paused },
       development: this.development, developmentAudio: Boolean(this.pool?.developmentAudio),
       graph: { mode: this.decisions.available ? 'REAL_MALECNS' : 'UNAVAILABLE', artifactSha256: this.decisions.identity?.artifactSha256 ?? null },
-      program, thought, logHealthy: !this.journal.failed };
+      program, thought, broadcast: broadcastInfo, logHealthy: !this.journal.failed };
   }
   async command(command) {
     if (!this.development) throw new Error('Operator transport is not configured.');
