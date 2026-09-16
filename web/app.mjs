@@ -1,7 +1,15 @@
 const byId = id => document.getElementById(id);
 const labels = { preference: 'Aday tercihi', risk: 'Risk eğilimi', energyDirection: 'Enerji yönü',
   transitionAggressiveness: 'Geçiş yoğunluğu', blend: 'Uzun karışım eğilimi', showOff: 'Gösteriş eğilimi' };
+const featureLabels = { currentBpm: 'BPM', candidateBpmDifference: 'BPM farkı', energy: 'Enerji',
+  loudness: 'Yükseklik', bassEnergy: 'Bas', midEnergy: 'Mid', highEnergy: 'Tiz',
+  rhythmicDensity: 'Ritim', spectralCentroid: 'Centroid', harmonicCompatibility: 'Uyum',
+  setEnergy: 'Set enerjisi', requestedEnergyDirection: 'Enerji yönü', transitionOpportunity: 'Geçiş fırsatı',
+  spectralFlatness: 'Düzlük' };
 let telemetry = null;
+let frozen = false;
+let sortKey = 'activity';
+let sortDir = -1;
 
 function draw() {
   const canvas = byId('network');
@@ -32,6 +40,35 @@ function draw() {
   }
 }
 
+function renderInputs() {
+  const box = byId('feature-bars');
+  if (!box) return;
+  const groups = (telemetry?.groups ?? []).filter(g => g.name in featureLabels);
+  if (!groups.length) { box.textContent = 'Henüz veri yok.'; return; }
+  box.replaceChildren(...groups
+    .sort((a, b) => b.stimulus - a.stimulus)
+    .map(g => {
+      const row = document.createElement('div'); row.className = 'frow';
+      const name = document.createElement('span'); name.className = 'fname'; name.textContent = featureLabels[g.name] ?? g.name;
+      const bars = document.createElement('span'); bars.className = 'fbars';
+      const stim = document.createElement('i'); stim.className = 'stim'; stim.style.width = `${Math.round(g.stimulus * 100)}%`;
+      const act = document.createElement('i'); act.className = 'act'; act.style.width = `${Math.round(g.activity * 100)}%`;
+      bars.append(stim, act);
+      const val = document.createElement('span'); val.className = 'fval';
+      val.textContent = `${g.stimulus.toFixed(2)} / ${g.activity.toFixed(2)}`;
+      row.append(name, bars, val);
+      return row;
+    }));
+}
+
+const comparators = {
+  id: (a, b) => String(a.id).localeCompare(String(b.id)),
+  type: (a, b) => String(a.type ?? '').localeCompare(String(b.type ?? '')),
+  role: (a, b) => String(a.role).localeCompare(String(b.role)),
+  activity: (a, b) => a.activity - b.activity,
+  stimulus: (a, b) => a.stimulus - b.stimulus
+};
+
 function renderNeurons() {
   const rows = byId('neuron-rows');
   const count = byId('neuron-count');
@@ -47,23 +84,36 @@ function renderNeurons() {
   }
   const q = (byId('neuron-search')?.value ?? '').trim().toLowerCase();
   const role = byId('role-filter')?.value ?? 'all';
+  const cmp = comparators[sortKey] ?? comparators.activity;
   const filtered = telemetry.nodes
     .filter(n => (role === 'all' || n.role === role))
     .filter(n => !q || String(n.id).toLowerCase().includes(q) || String(n.type ?? '').toLowerCase().includes(q))
-    .sort((a, b) => b.activity - a.activity || b.stimulus - a.stimulus);
-  count.textContent = `${filtered.length} nöron eşleşti (görünür örneklem ${telemetry.nodes.length}). İlk 100 satır listelenir.`;
+    .sort((a, b) => cmp(a, b) * sortDir || comparators.activity(a, b) * -1);
+  count.textContent = `${filtered.length} nöron eşleşti (görünür örneklem ${telemetry.nodes.length}). İlk 100 satır.${frozen ? ' Görünüm donuk.' : ''}`;
   rows.replaceChildren(...filtered.slice(0, 100).map(n => {
     const tr = document.createElement('tr');
-    for (const value of [String(n.id), String(n.type ?? '—'), String(n.role), Number(n.activity).toFixed(4), Number(n.stimulus).toFixed(4)]) {
-      const td = document.createElement('td');
-      td.textContent = value;
-      tr.append(td);
-    }
+    const id = document.createElement('td'); id.textContent = String(n.id);
+    const type = document.createElement('td'); type.textContent = String(n.type ?? '—');
+    const rl = document.createElement('td'); rl.textContent = String(n.role);
+    const act = document.createElement('td'); act.className = 'bar-cell';
+    const bar = document.createElement('span'); bar.className = 'bar';
+    const fill = document.createElement('i'); fill.style.width = `${Math.round(n.activity * 100)}%`;
+    if (n.stimulus > 0) fill.className = 'stimmed';
+    bar.append(fill);
+    const num = document.createElement('b'); num.textContent = Number(n.activity).toFixed(4);
+    act.append(bar, num);
+    const stim = document.createElement('td'); stim.textContent = Number(n.stimulus).toFixed(4);
+    tr.append(id, type, rl, act, stim);
     return tr;
   }));
+  document.querySelectorAll('#neuron-table th button').forEach(btn => {
+    const active = btn.dataset.sort === sortKey;
+    btn.textContent = btn.textContent.replace(/ [↑↓]$/, '') + (active ? (sortDir === 1 ? ' ↑' : ' ↓') : '');
+  });
 }
 
 export function renderTelemetry(next) {
+  if (frozen) return;
   telemetry = next;
   byId('source').textContent = next.source.label;
   byId('explanation').textContent = next.source.explanation;
@@ -79,6 +129,7 @@ export function renderTelemetry(next) {
     item.append(term, amount); return item;
   }));
   draw();
+  renderInputs();
   renderNeurons();
   const banner = byId('broadcast-banner');
   if (banner) {
@@ -123,6 +174,20 @@ byId('rerun').addEventListener('submit', async event => {
 byId('neuron-search')?.addEventListener('input', renderNeurons);
 byId('role-filter')?.addEventListener('change', renderNeurons);
 byId('neuron-filter')?.addEventListener('submit', event => event.preventDefault());
+document.querySelectorAll('#neuron-table th button').forEach(btn => btn.addEventListener('click', () => {
+  const key = btn.dataset.sort;
+  if (key === sortKey) sortDir *= -1;
+  else { sortKey = key; sortDir = key === 'activity' ? -1 : 1; }
+  renderNeurons();
+}));
+byId('freeze')?.addEventListener('click', () => {
+  frozen = !frozen;
+  const btn = byId('freeze');
+  btn.textContent = frozen ? 'Canlıya dön' : 'Görünümü dondur';
+  btn.setAttribute('aria-pressed', String(frozen));
+  if (!frozen) refresh();
+  else renderNeurons();
+});
 new ResizeObserver(draw).observe(byId('network'));
 // Event hosts may deliver their local engine telemetry without exposing the graph artifact.
 window.addEventListener('djfly:telemetry', event => renderTelemetry(event.detail));

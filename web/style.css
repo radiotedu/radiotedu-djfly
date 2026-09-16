@@ -40,6 +40,20 @@ table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
 th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #2c2d31; white-space: nowrap; }
 th { color: #c6c7cc; font-weight: 600; background: #1b1c1f; }
 tbody tr:hover { background: #1e1f23; }
+#neuron-table th button { background: none; border: 0; color: inherit; font: inherit; padding: 0; cursor: pointer; min-height: 0; }
+#neuron-table th button:hover { color: #fff; }
+.bar-cell { min-width: 170px; }
+.bar { display: inline-block; width: 90px; height: 8px; background: #2c2d31; border-radius: 4px; overflow: hidden; vertical-align: middle; margin-right: 8px; }
+.bar i { display: block; height: 100%; background: #c6c7cc; }
+.bar i.stimmed { background: #ff7075; }
+.bar-cell b { font-weight: 600; font-size: 0.85rem; }
+.frow { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid #242528; }
+.fname { width: 130px; flex: none; color: #c6c7cc; font-size: 0.85rem; }
+.fbars { position: relative; flex: 1; height: 12px; background: #242528; border-radius: 3px; }
+.fbars i { position: absolute; left: 0; top: 0; height: 100%; border-radius: 3px; }
+.fbars i.act { background: #696a70; }
+.fbars i.stim { background: rgba(227,30,38,.85); height: 5px; top: 3.5px; }
+.fval { width: 110px; flex: none; text-align: right; font-size: 0.8rem; color: #b5b6bd; font-variant-numeric: tabular-nums; }
 #error { color: #ffb6b9; }
 [hidden] { display: none !important; }
 @media (max-width: 540px) {

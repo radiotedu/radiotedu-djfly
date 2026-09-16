@@ -11,21 +11,33 @@
   <main>
     <header><a href="https://radiotedu.com/">RadioTEDU</a><span>DJ Fly</span></header>
     <h1>Kararın içinden.</h1>
-    <p class="intro">Müzik özelliklerinden ağ etkinliğine, ağ etkinliğinden geçiş tercihine.</p>
+    <p class="intro">Müzik özelliklerinden ağ etkinliğine, ağ etkinliğinden geçiş tercihine.
+    Aşağıdan yukarıya oku: girdi → kontrol → beyin.</p>
     <p id="source" class="source" role="status">Yerel ağ durumu yükleniyor…</p>
     <p id="broadcast-banner" class="broadcast" role="status" hidden></p>
-    <figure>
-      <canvas id="network" aria-label="Giriş, ara ve çıkış gruplarının hesaplanan etkinliği"></canvas>
-      <figcaption><span>Yapay girdiler</span><span>Ara bağlantılar</span><span>Karar okumaları</span></figcaption>
-    </figure>
-    <p class="caption">Konumlar şematiktir. Düğüm yoğunlukları ve yollar, son kararın hesaplanan ağ durumunu gösterir.</p>
-    <p id="decision" aria-live="polite">Henüz karar yok.</p>
-    <dl id="readouts" aria-label="Karar kanalları"></dl>
 
-    <section id="neurons" aria-labelledby="neurons-title">
-      <h2 id="neurons-title">Hangi nöron ateşlendi?</h2>
-      <p>Son kararın hesaplanan ağ durumu. <code>activity</code> yayılım sonrası durum (0–1),
-      <code>stimulus</code> yapay müzik girdisi. Tablo ilk 100 satırla sınırlı, arama ile filtrele.</p>
+    <section id="decision-panel" aria-labelledby="decision-title">
+      <h2 id="decision-title">Karar</h2>
+      <p id="decision" aria-live="polite">Henüz karar yok.</p>
+      <dl id="readouts" aria-label="Karar kanalları"></dl>
+    </section>
+
+    <section id="inputs" aria-labelledby="inputs-title">
+      <h2 id="inputs-title">Girdiler: sinek ne duydu?</h2>
+      <p>14 müzik/DJ özelliği, yapay eşlemeyle Kenyon hücresi gruplarına yazıldı.
+      Kırmızı = verilen uyaran, gri = gruptaki ortalama etkinlik. Ölçek sabit (0–1),
+      sessiz bir grup kalabalıkta parlamaz.</p>
+      <div id="feature-bars" role="status">Henüz veri yok.</div>
+    </section>
+
+    <section id="brain" aria-labelledby="brain-title">
+      <h2 id="brain-title">Beyin: hangi nöron ateşlendi?</h2>
+      <figure>
+        <canvas id="network" aria-label="Giriş, ara ve çıkış gruplarının hesaplanan etkinliği"></canvas>
+        <figcaption><span>Yapay girdiler</span><span>Ara bağlantılar</span><span>Karar okumaları</span></figcaption>
+      </figure>
+      <p class="caption">Konumlar şematiktir. Parlak düğüm = yüksek etkinlik, kırmızı = doğrudan uyaran aldı.
+      En parlak yollar son kararın izlediği bağlantılardır.</p>
       <form id="neuron-filter">
         <label for="neuron-search">Ara (bodyId / tip)</label>
         <input id="neuron-search" name="q" type="search" placeholder="ör. MBON, KCab-m, 10013" autocomplete="off">
@@ -36,22 +48,33 @@
           <option value="intermediate">Ara (APL/DPM)</option>
           <option value="output">Çıktı (MBON)</option>
         </select>
+        <button id="freeze" type="button" aria-pressed="false">Görünümü dondur</button>
       </form>
       <p id="neuron-count" role="status">Nöron verisi bekleniyor.</p>
       <div class="table-wrap">
       <table id="neuron-table">
-        <thead><tr><th>bodyId</th><th>tip</th><th>rol</th><th>activity</th><th>stimulus</th></tr></thead>
+        <thead><tr>
+          <th><button type="button" data-sort="id">bodyId</button></th>
+          <th><button type="button" data-sort="type">tip</button></th>
+          <th><button type="button" data-sort="role">rol</button></th>
+          <th><button type="button" data-sort="activity">etkinlik ↓</button></th>
+          <th><button type="button" data-sort="stimulus">uyaran</button></th>
+        </tr></thead>
         <tbody id="neuron-rows"><tr><td colspan="5">Henüz veri yok.</td></tr></tbody>
       </table>
       </div>
-      <p class="caption">Tam liste geliştirici modunda <code>/djfly/api/debug</code> altında
-      (<code>neuralInput</code>, <code>strongestGroups</code>). Görünür düğümler
-      <code>telemetry/state.mjs</code> içinde rol başına ilk 64 + 192 kenar + 6 yol ile örneklenir.</p>
+      <p class="caption">Başlığa tıkla, sıralama değişir. Çubuk = etkinlik (0–1).
+      Görünür örneklem rol başına ilk 64 + 192 kenar + 6 yol
+      (<code>telemetry/state.mjs</code>). Tam kayıt geliştirici modunda
+      <code>/djfly/api/debug</code> altında.</p>
     </section>
 
     <section id="method" aria-labelledby="method-title">
-      <h2 id="method-title">Yöntem: yapay eşleme + basitleştirilmiş model</h2>
-      <p>Bağlantılar gerçektir (MaleCNS), anlamlandırmalar RadioTEDU tasarımıdır.
+      <h2 id="method-title">Döngü nasıl çalışıyor?</h2>
+      <pre>Müzik + DJ durumu → 14 özellik → KC gruplarına uyaran
+→ 16 adım yayılım (gerçek MaleCNS bağlantıları)
+→ 6 MBON kanalı → güvenli parça + geçiş</pre>
+      <p>Bağlantılar gerçektir (MaleCNS v1.0), anlamlandırmalar RadioTEDU tasarımıdır.
       Sinek müzik duymaz ve beğenmez; sıradaki parça güvenli adaylar arasından sıralanır.</p>
       <h3>14 özellik → Kenyon hücresi tipi</h3>
       <div class="table-wrap">
@@ -118,23 +141,37 @@ readout = 0.5 + 0.5·tanh(8·(grupOrt − ortalamalarınOrt))</pre>
     </section>
 
     <section id="ecosystem" aria-labelledby="eco-title">
-      <h2 id="eco-title">Meyve sineği beyniyle yapılan diğer işler</h2>
-      <p>Tasarım ve işleyiş notlarıyla; DJ Fly hepsinden parça alır ama hiçbirinin yerini tutmaz.</p>
+      <h2 id="eco-title">Sineği kullanan diğer işler</h2>
+      <p>Atlaslar değil, konektomu bir işe koşan projeler. Tasarım notlarıyla — kopyalanacak yerler işaretli.</p>
       <ul>
-        <li><strong>Fruit Fly Brain Observatory (FFBO)</strong> — açık işbirlikçi ekosistem.
-        3B morfoloji gezgini + NeuroNLP ile düz İngilizce sorgu (“sağ SLP’de çıktısı olan MBON’ları göster”).
-        İşleyiş: veri kümelerini ortak şablonda birleştirir. <a href="https://www.fruitflybrain.org/">fruitflybrain.org</a></li>
-        <li><strong>Neurokernel</strong> — tüm sinek beynini çoklu GPU’da öykünmek için açık platform.
-        RFC tabanlı modüller, retina paralel işlem demosu. <a href="https://neurokernel.github.io/">neurokernel.github.io</a></li>
-        <li><strong>FlyBrainLab</strong> — morfolojiden çalıştırılabilir devre kurma: keşfet → devreleştir → işlevi sına.
-        Merkezi kompleks (CX) vaka akışı. <a href="http://www.bionet.ee.columbia.edu/research/ffbo/fbl">FlyBrainLab</a></li>
-        <li><strong>FlyWire / Hemibrain / neuPrint</strong> — 120 binden fazla düzeltilmiş nöron, 30M+ sinaps;
-        hemibrain 25 bin nöron / 20M bağlantı, MB devresi Li vd. 2020. neuPrint ile ortak/komşu sorgusu.
-        <a href="https://flywire.ai/">FlyWire</a> · <a href="https://neuprint.janelia.org/">neuPrint</a></li>
-        <li><strong>Virtual Fly Brain (VFB)</strong> — 28.772 anatomi terimi, 614 bin kayıtlı 3B görüntü, NBLAST şekil benzerliği,
-        Circuit Browser, gen/sürücü satırı eşleme. <a href="https://www.virtualflybrain.org/">virtualflybrain.org</a></li>
-        <li><strong>MaleCNS gezginleri</strong> — hücre-tipi ve dimorfizm kaşifi, Clio anotasyon görünümü, NeuronBridge eşleşmeleri,
-        toplu indirme (<code>gs://flyem-male-cns</code> + neo4j). <a href="https://male-cns.janelia.org/">male-cns.janelia.org</a></li>
+        <li><strong>Fly64: sinek Mario 64 oynuyor</strong> (<a href="https://github.com/ornata/fly">ornata/fly</a>, ★49) —
+        Oyun pikselleri → gerçek fotoreseptörler, 4 motor nörondan NES komutları, eğitim yok.
+        Kopyalandı: bu sayfanın yukarıdan-aşağıya pano düzeni (gözler → kontroller → beyin),
+        sabit ölçekli grafikler, dondur düğmesi, deterministik tekrar kaydı.</li>
+        <li><strong>Fly Super Mario, 60 FPS</strong> (<a href="https://news.ycombinator.com/item?id=49666828">HN</a> ·
+        <a href="https://kaarelkaarelson.github.io/fly-super-mario/">demo</a>) —
+        166.700 nöron / 25,6M sinaps (MaleCNS v1.0, djfly ile aynı veri), tek CPU çekirdeği,
+        kare başına ~6-7 ms. Minimal site: kocaman başlık, canlı FPS, oyna düğmesi.</li>
+        <li><strong>Help the Fly Escape</strong> (<a href="https://github.com/dzhng/fly-escape">dzhng/fly-escape</a>) —
+        Tarayıcıda 3B evden kaçış oyunu, Rust/WASM LIF. Kopyalandı: sineği takip et,
+        sade dille beyin açıklaması, duraklat/geri sar, gerçek zamanlı veya hızlı tekrar.</li>
+        <li><strong>FastFly</strong> (<a href="https://github.com/eonfathom/FastFly">eonfathom/FastFly</a>) —
+        139.255 nöron / 54,5M sinaps CUDA'da, FastAPI + WebSocket canlı görselleştirici.
+        Kopyalandı: WebSocket yerine SSE tercihi (bizim yük parça başına bir snapshot).</li>
+        <li><strong>FlySim</strong> (<a href="https://github.com/mikewolak/flysim">mikewolak/flysim</a>) —
+        Apple Silicon LIF + MCP kontrol düzlemi. Kopyalandı: işlem sırasına dizili aktivite şeridi
+        (duyu altta → motor üstte) ve HTTP + SSE kontrol API'si fikri.</li>
+        <li><strong>Eon / FlyGNN</strong> (<a href="https://www.reddit.com/r/singularity/comments/1roins8/eonsys_releases_video_of_a_simulated_fly_running">r/singularity</a> ·
+        <a href="https://www.reddit.com/r/consciousness/comments/1roea5h/the_first_multibehavior_brain_upload_of_a_fruit">r/consciousness</a>) —
+        FlyWire + MuJoCo sanal gövde: yürüme, tımar, beslenme; motor davranışta %95 tahmin.
+        Ders: gövde (veya bizde parça listesi) olmadan beyin çıktısı anlamsız kalır.</li>
+        <li><strong>Atlaslar (arka plan)</strong> —
+        <a href="https://www.fruitflybrain.org/">FFBO/NeuroNLP</a> ·
+        <a href="https://neurokernel.github.io/">Neurokernel</a> ·
+        <a href="https://flywire.ai/">FlyWire/Codex</a> ·
+        <a href="https://neuprint.janelia.org/">neuPrint</a> ·
+        <a href="https://www.virtualflybrain.org/">VFB/NBLAST</a> ·
+        <a href="https://male-cns.janelia.org/">MaleCNS</a></li>
       </ul>
     </section>
 
