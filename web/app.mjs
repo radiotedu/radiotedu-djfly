@@ -10,6 +10,9 @@ let telemetry = null;
 let frozen = false;
 let sortKey = 'activity';
 let sortDir = -1;
+let selectedId = null;
+let hoverId = null;
+let layout = [];
 
 function draw() {
   const canvas = byId('network');
@@ -17,27 +20,97 @@ function draw() {
   const rect = canvas.getBoundingClientRect();
   canvas.width = Math.round(rect.width * ratio); canvas.height = Math.round(rect.height * ratio);
   const context = canvas.getContext('2d'); context.scale(ratio, ratio);
+  layout = [];
   if (!telemetry?.nodes?.length) {
     context.fillStyle = '#c6c7cc'; context.font = '15px system-ui';
     context.fillText('Hesaplanmış ağ etkinliği bekleniyor.', 20, rect.height / 2); return;
   }
-  const point = node => ({ x: node.x * rect.width, y: 12 + node.y * (rect.height - 24) });
+  const laneName = { input: 'GİRDİ · KC', intermediate: 'ARA · APL/DPM', output: 'ÇIKTI · MBON' };
+  const lanes = ['input', 'intermediate', 'output'];
+  context.font = '11px system-ui'; context.fillStyle = '#696a70';
+  lanes.forEach((role, i) => context.fillText(laneName[role], 0.12 * rect.width + i * 0.38 * rect.width - 30, 14));
+  const point = node => ({ x: node.x * rect.width, y: 26 + node.y * (rect.height - 40) });
   const nodes = new Map(telemetry.nodes.map(node => [node.id, { ...node, ...point(node) }]));
   const paths = new Set((telemetry.paths ?? []).flatMap(path => path.slice(1).map((id, i) => `${path[i]}|${id}`)));
+  const selected = selectedId != null ? nodes.get(selectedId) : null;
+  const neighbours = new Set();
+  if (selected) {
+    for (const edge of telemetry.edges) {
+      if (edge.source === selectedId) neighbours.add(edge.target);
+      if (edge.target === selectedId) neighbours.add(edge.source);
+    }
+  }
   for (const edge of telemetry.edges) {
     const source = nodes.get(edge.source), target = nodes.get(edge.target);
     if (!source || !target || edge.activity <= 0) continue;
-    context.strokeStyle = paths.has(`${edge.source}|${edge.target}`)
-      ? `rgba(227,30,38,${0.15 + edge.activity * 0.7})` : `rgba(198,199,204,${edge.activity * 0.18})`;
-    context.lineWidth = paths.has(`${edge.source}|${edge.target}`) ? 1.3 : 0.7;
+    const hot = selected && (edge.source === selectedId || edge.target === selectedId);
+    if (selected && !hot) continue;
+    context.strokeStyle = hot || paths.has(`${edge.source}|${edge.target}`)
+      ? `rgba(227,30,38,${0.2 + edge.activity * 0.75})` : `rgba(198,199,204,${edge.activity * 0.18})`;
+    context.lineWidth = hot ? 2 : paths.has(`${edge.source}|${edge.target}`) ? 1.3 : 0.7;
     context.beginPath(); context.moveTo(source.x, source.y);
     context.bezierCurveTo((source.x + target.x) / 2, source.y, (source.x + target.x) / 2, target.y, target.x, target.y);
     context.stroke();
   }
   for (const node of nodes.values()) {
+    const r = 2 + node.activity * 4;
+    const dim = selected && node.id !== selectedId && !neighbours.has(node.id);
+    context.globalAlpha = dim ? 0.25 : 1;
     context.fillStyle = node.stimulus > 0 ? '#ff7075' : `rgba(244,244,244,${0.2 + node.activity * 0.8})`;
-    context.beginPath(); context.arc(node.x, node.y, 1.3 + node.activity * 2.5, 0, Math.PI * 2); context.fill();
+    context.beginPath(); context.arc(node.x, node.y, r, 0, Math.PI * 2); context.fill();
+    if (node.id === hoverId || node.id === selectedId) {
+      context.strokeStyle = '#fff'; context.lineWidth = 1.5;
+      context.beginPath(); context.arc(node.x, node.y, r + 3, 0, Math.PI * 2); context.stroke();
+    }
+    context.globalAlpha = 1;
+    layout.push({ id: node.id, x: node.x, y: node.y, r: r + 4, node });
   }
+  const top = [...nodes.values()].filter(n => n.activity > 0.5).sort((a, b) => b.activity - a.activity).slice(0, 8);
+  context.font = '10px system-ui'; context.fillStyle = '#c6c7cc';
+  for (const node of top) {
+    if (node.id === hoverId || node.id === selectedId) continue;
+    context.fillText(`${node.type ?? node.id}`, node.x + 7, node.y - 6);
+  }
+}
+
+function pickAt(mx, my) {
+  let best = null, bestDist = 14;
+  for (const item of layout) {
+    const d = Math.hypot(item.x - mx, item.y - my);
+    if (d <= Math.max(bestDist, item.r) && d < bestDist + item.r) { best = item; bestDist = d - item.r; }
+  }
+  return best;
+}
+
+function showTip(item, mx, my) {
+  const tip = byId('node-tip');
+  if (!tip) return;
+  if (!item) { tip.hidden = true; return; }
+  const n = item.node;
+  tip.hidden = false;
+  tip.textContent = `${n.id} · ${n.type ?? '—'} · ${n.role} · etkinlik ${Number(n.activity).toFixed(3)} · uyaran ${Number(n.stimulus).toFixed(3)}`;
+  const fig = tip.parentElement.getBoundingClientRect();
+  tip.style.left = `${Math.min(Math.max(mx + 12, 0), fig.width - 240)}px`;
+  tip.style.top = `${Math.max(my - 10, 0)}px`;
+}
+
+function bindCanvas() {
+  const canvas = byId('network');
+  canvas.addEventListener('mousemove', event => {
+    const rect = canvas.getBoundingClientRect();
+    const item = pickAt(event.clientX - rect.left, event.clientY - rect.top);
+    const id = item?.id ?? null;
+    if (id !== hoverId) { hoverId = id; canvas.style.cursor = id ? 'pointer' : 'default'; draw(); }
+    showTip(item, event.clientX - rect.left, event.clientY - rect.top);
+  });
+  canvas.addEventListener('mouseleave', () => { hoverId = null; showTip(null); draw(); });
+  canvas.addEventListener('click', event => {
+    const rect = canvas.getBoundingClientRect();
+    const item = pickAt(event.clientX - rect.left, event.clientY - rect.top);
+    selectedId = item && item.id !== selectedId ? item.id : null;
+    draw();
+    if (selectedId) showTip(item, event.clientX - rect.left, event.clientY - rect.top);
+  });
 }
 
 function renderInputs() {
@@ -115,6 +188,7 @@ function renderNeurons() {
 export function renderTelemetry(next) {
   if (frozen) return;
   telemetry = next;
+  selectedId = null; hoverId = null;
   byId('source').textContent = next.source.label;
   byId('explanation').textContent = next.source.explanation;
   byId('attribution').textContent = next.source.attribution;
@@ -189,6 +263,7 @@ byId('freeze')?.addEventListener('click', () => {
   else renderNeurons();
 });
 new ResizeObserver(draw).observe(byId('network'));
+bindCanvas();
 // Event hosts may deliver their local engine telemetry without exposing the graph artifact.
 window.addEventListener('djfly:telemetry', event => renderTelemetry(event.detail));
 await refresh();

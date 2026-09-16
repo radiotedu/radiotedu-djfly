@@ -32,10 +32,12 @@
 
     <section id="brain" aria-labelledby="brain-title">
       <h2 id="brain-title">Beyin: hangi nöron ateşlendi?</h2>
-      <figure>
+      <figure class="map">
         <canvas id="network" aria-label="Giriş, ara ve çıkış gruplarının hesaplanan etkinliği"></canvas>
+        <div id="node-tip" class="node-tip" hidden></div>
         <figcaption><span>Yapay girdiler</span><span>Ara bağlantılar</span><span>Karar okumaları</span></figcaption>
       </figure>
+      <p class="caption">Üzerine gel: nöron kimliği ve ateşlenme. Tıkla: o nöronun bağlantılarını izole et, tekrar tıkla: bırak.</p>
       <p class="caption">Konumlar şematiktir. Parlak düğüm = yüksek etkinlik, kırmızı = doğrudan uyaran aldı.
       En parlak yollar son kararın izlediği bağlantılardır.</p>
       <form id="neuron-filter">
