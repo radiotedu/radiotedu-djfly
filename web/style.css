@@ -43,6 +43,8 @@ table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
 th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #2c2d31; white-space: nowrap; }
 th { color: #c6c7cc; font-weight: 600; background: #1b1c1f; }
 tbody tr:hover { background: #1e1f23; }
+#neuron-table tbody tr { cursor: pointer; }
+#neuron-table tr.selected td { background: rgba(227,30,38,.14); }
 #neuron-table th button { background: none; border: 0; color: inherit; font: inherit; padding: 0; cursor: pointer; min-height: 0; }
 #neuron-table th button:hover { color: #fff; }
 .bar-cell { min-width: 170px; }

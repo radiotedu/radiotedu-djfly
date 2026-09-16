@@ -108,7 +108,7 @@ function bindCanvas() {
     const rect = canvas.getBoundingClientRect();
     const item = pickAt(event.clientX - rect.left, event.clientY - rect.top);
     selectedId = item && item.id !== selectedId ? item.id : null;
-    draw();
+    draw(); renderNeurons();
     if (selectedId) showTip(item, event.clientX - rect.left, event.clientY - rect.top);
   });
 }
@@ -165,6 +165,11 @@ function renderNeurons() {
   count.textContent = `${filtered.length} nöron eşleşti (görünür örneklem ${telemetry.nodes.length}). İlk 100 satır.${frozen ? ' Görünüm donuk.' : ''}`;
   rows.replaceChildren(...filtered.slice(0, 100).map(n => {
     const tr = document.createElement('tr');
+    if (String(n.id) === String(selectedId)) tr.className = 'selected';
+    tr.addEventListener('click', () => {
+      selectedId = String(n.id) === String(selectedId) ? null : n.id;
+      draw(); renderNeurons();
+    });
     const id = document.createElement('td'); id.textContent = String(n.id);
     const type = document.createElement('td'); type.textContent = String(n.type ?? '—');
     const rl = document.createElement('td'); rl.textContent = String(n.role);
